@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify
+import os
 
 # --- Application Setup ---
 app = Flask(__name__)
@@ -25,13 +26,11 @@ def calculate_wqi(data):
                 ideal = config['ideal']
                 weight = config['weight']
 
-                # Quality Rating
                 if (standard - ideal) == 0:
                     qi = 0
                 else:
                     qi = 100 * (observed - ideal) / (standard - ideal)
 
-                # DO correction
                 if param == 'do':
                     if observed >= standard:
                         qi = 100 * (1 - observed / ideal)
@@ -42,7 +41,6 @@ def calculate_wqi(data):
 
                 total_qw += qi * weight
                 total_w += weight
-
             except:
                 continue
 
@@ -67,14 +65,22 @@ def get_status(wqi):
 # --- Routes ---
 @app.route('/')
 def home():
-    return render_template("index.html")
+    google_maps_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+    return render_template(
+        "index.html",
+        google_maps_key=google_maps_key
+    )
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
     data = request.json
     score = calculate_wqi(data)
     status, color = get_status(score)
-    return jsonify({"wqi": score, "status": status, "color": color})
+    return jsonify({
+        "wqi": score,
+        "status": status,
+        "color": color
+    })
 
 # --- Run ---
 if __name__ == "__main__":
